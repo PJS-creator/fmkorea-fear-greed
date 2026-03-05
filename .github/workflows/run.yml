@@ -32,8 +32,9 @@ jobs:
         env:
           TZ: Asia/Seoul
           USE_FINBERT: "1"
-          MAX_PAGES: "20"
-          DELAY_SEC: "1.0"
+          MAX_PAGES: "3"     # 20 → 3 (우선 줄여서 429 위험 낮추기)
+          DELAY_SEC: "2.0"   # 1.0 → 2.0
+          DEBUG: "1"         # ✅ 추가
         run: |
           python main.py
 
