@@ -420,10 +420,24 @@ def classify_titles_finbert(finbert_pipe, titles: list[str]) -> tuple[int, int]:
 # =========================
 def load_kospi_prices(start: str, end: str) -> pd.DataFrame:
     import yfinance as yf
-    df = yf.download("^KS11", start=start, end=end, interval="1d", auto_adjust=False,
-                     progress=False, threads=False)
+
+    df = yf.download(
+        "^KS11",
+        start=start,
+        end=end,
+        interval="1d",
+        auto_adjust=False,
+        progress=False,
+        threads=False,
+    )
+
     if df is None or len(df) == 0:
         raise RuntimeError("yfinance returned empty dataframe for ^KS11")
+
+    # ✅ 핵심: yfinance가 MultiIndex 컬럼으로 줄 때가 있음 -> 1레벨로 평탄화
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+
     df = df.copy()
     df.index = pd.to_datetime(df.index)
     df.sort_index(inplace=True)
