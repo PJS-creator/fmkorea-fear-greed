@@ -1,0 +1,55 @@
+name: KOSPI >=3% Move Days (Since 2022)
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "Start date (YYYY-MM-DD)"
+        required: true
+        default: "2022-01-01"
+      threshold_pct:
+        description: "Threshold percent (e.g., 3)"
+        required: true
+        default: "3"
+
+permissions:
+  contents: write
+
+jobs:
+  run-kospi-query:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run query
+        env:
+          START_DATE: ${{ inputs.start_date }}
+          THRESHOLD_PCT: ${{ inputs.threshold_pct }}
+          OUT_CSV: "kospi_3pct_days.csv"
+        run: |
+          python kospi_3pct_days.py
+
+      - name: Commit & Push result if changed
+        run: |
+          if git status --porcelain | grep -q "kospi_3pct_days.csv"; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            git add kospi_5pct_days.csv
+            git commit -m "Update KOSPI >=${{ inputs.threshold_pct }}% days (auto)"
+            git push
+          else
+            echo "No changes to commit."
+          fi
