@@ -585,20 +585,24 @@ def main():
     end = (fg_ok["date"].max() + pd.Timedelta(days=10)).strftime("%Y-%m-%d")
 
     kospi = load_kospi_prices(start, end)
-    kospi["next_trading_date"] = kospi.index.to_series().shift(-1)
-    kospi["next_day_ret_pct"] = kospi["Close"].pct_change().shift(-1) * 100.0
+    # ✅ Close가 혹시 DataFrame으로 나오는 경우(멀티컬럼) 대비
+    close = kospi["Close"]
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
 
-    kospi2 = kospi.reset_index().rename(columns={"index": "date"})
-    kospi2["date"] = pd.to_datetime(kospi2["Date"]) if "Date" in kospi2.columns else pd.to_datetime(kospi2["date"])
-    if "Date" in kospi2.columns:
-        kospi2 = kospi2.drop(columns=["Date"])
+    kospi2 = pd.DataFrame({
+        "date": close.index,
+        "next_trading_date": close.index.to_series().shift(-1),
+        "next_day_ret_pct": close.pct_change().shift(-1) * 100.0,
+    }).dropna(subset=["next_trading_date", "next_day_ret_pct"])
 
     merged = pd.merge(
         fg_df.assign(date=pd.to_datetime(fg_df["date"])),
-        kospi2[["date", "next_trading_date", "next_day_ret_pct"]],
+        kospi2,
         on="date",
         how="left",
     )
+
     merged["next_trading_date"] = pd.to_datetime(merged["next_trading_date"]).dt.strftime("%Y-%m-%d")
     merged["next_day_ret_pct"] = pd.to_numeric(merged["next_day_ret_pct"], errors="coerce")
     merged["next_day_abs_ret_pct"] = merged["next_day_ret_pct"].abs()
