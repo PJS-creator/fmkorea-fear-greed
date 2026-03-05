@@ -191,6 +191,17 @@ def parse_dcinside_regdate(text: str, now_kst: datetime) -> datetime | None:
 
     return None
 
+    # MM.DD (예: 03.05)
+    m = re.match(r"^(\d{1,2})\.(\d{1,2})$", raw)
+    if m:
+        mo = int(m.group(1))
+        dd = int(m.group(2))
+        yyyy = now_kst.year
+        dt = datetime(yyyy, mo, dd, 0, 0, tzinfo=KST)
+        # 미래 날짜로 해석되면(연초/연말 경계) 전년도 처리
+        if dt.date() > now_kst.date():
+            dt = datetime(yyyy - 1, mo, dd, 0, 0, tzinfo=KST)
+        return dt
 
 def extract_posts_from_html_dcinside(html: str, now_kst: datetime) -> list[Post]:
     """
