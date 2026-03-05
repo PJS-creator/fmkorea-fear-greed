@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -61,13 +63,36 @@ jobs:
       - name: Commit & Push results if changed
         if: always()
         run: |
-          git status --porcelain
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 결과 파일 추가(없어도 에러 안 나게)
           git add backtest_fear_greed.csv backtest_merged.csv backtest_corr.csv || true
-          if git status --porcelain | grep -E -q "(backtest_fear_greed.csv|backtest_merged.csv|backtest_corr.csv)"; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -m "Backtest outputs (auto)"
-            git push
-          else
+
+          # 스테이징된 변경이 없으면 종료
+          if git diff --cached --quiet; then
             echo "No changes to commit."
+            exit 0
           fi
+
+          git commit -m "Backtest outputs (auto)"
+
+          # ✅ 원격(main) 최신 커밋을 먼저 받아서(rebase) push 재시도
+          for i in 1 2 3 4 5; do
+            echo "Attempt $i: pulling latest main with rebase..."
+            git pull --rebase origin main || true
+
+            echo "Attempt $i: pushing..."
+            if git push; then
+              echo "Push succeeded."
+              exit 0
+            fi
+
+            echo "Push failed (non-fast-forward). retrying..."
+            sleep $((5*i))
+          done
+
+          echo "Push failed after retries."
+          exit 1
