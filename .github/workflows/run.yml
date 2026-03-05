@@ -1,4 +1,4 @@
-name: FMKorea Fear & Greed Index (Daily)
+name: DCInside Fear & Greed Index (Daily)
 
 on:
   schedule:
@@ -23,6 +23,15 @@ jobs:
         with:
           python-version: "3.10"
 
+      # (선택) 모델/토치 캐시하면 매일 다운로드 안 해서 훨씬 안정적
+      - name: Cache Hugging Face / Torch
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            ~/.cache/torch
+          key: ${{ runner.os }}-hf-${{ hashFiles('requirements.txt') }}
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -32,9 +41,11 @@ jobs:
         env:
           TZ: Asia/Seoul
           USE_FINBERT: "1"
-          MAX_PAGES: "3"     # 20 → 3 (우선 줄여서 429 위험 낮추기)
-          DELAY_SEC: "2.0"   # 1.0 → 2.0
-          DEBUG: "1"         # ✅ 추가
+          DC_GALLERY_ID: "krstock"
+          DC_LIST_URL: "https://gall.dcinside.com/mgallery/board/lists/"
+          MAX_PAGES: "10"
+          DELAY_SEC: "1.0"
+          # DEBUG: "1"   # 문제 생기면 켜세요
         run: |
           python main.py
 
